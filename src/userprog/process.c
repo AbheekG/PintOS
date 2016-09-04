@@ -15,6 +15,7 @@
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -195,7 +196,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, const char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -302,7 +303,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp,file_name))
     goto done;
 
   /* Start address. */
@@ -427,7 +428,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, const char *file_name) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -437,9 +438,63 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE;
+        {
+          *esp = PHYS_BASE;
+          /* Push the arguments on the stack. */
+          char *save_ptr, *token;
+          int argc = 0;
+          int default_argc = 4;
+          char **argv = malloc(sizeof(char*)*default_argc);
+          for (token = strtok_r (file_name, " ", &save_ptr); token != NULL;
+            token = strtok_r (NULL, " ", &save_ptr))
+            {
+              int len = strlen(token)+1;
+              *esp -= len;
+              argv[argc] = *esp;
+              memcpy(*esp, token, len);
+              argc++;
+              if(argc >= default_argc)
+                {
+                  default_argc *= 2;
+                  argv = realloc(argv, default_argc);
+                  if(argv==NULL)
+                    {
+                      /* How to handle error if memory allocation fails? */
+                    }
+                }
+            }
+          /* Push a null pointer. */
+          argv[argc] = 0;
+          /* Word alignment. */
+          int word_size = 4;
+          int i = ((size_t)(*esp))%word_size;
+          if(i)
+          {
+            *esp -= i;
+            memcpy(*esp, &argv[argc], i);
+          }
+          /* Push addresses of argv. */
+          for(i=argc;i>=0;i--)
+            {
+              *esp -= sizeof(char*);
+              memcpy(*esp, &argv[i], sizeof(char*));
+            }
+          /* Push address of argv. */
+          *esp -= sizeof(char**);
+          memcpy(*esp, &argv, sizeof(char**));
+          *esp -= sizeof(int);
+          /* Push argc. */
+          memcpy(*esp, &argc, sizeof(int));
+          /* Fake return address 0. */
+          *esp -= sizeof(void*));
+          memcpy(*esp, &argv[argc], sizeof(void*));
+          free(argv);
+          hex_dump(0, *esp, size_t(sizeof(*esp)), true);
+        }
       else
+      {
         palloc_free_page (kpage);
+      } 
     }
   return success;
 }
