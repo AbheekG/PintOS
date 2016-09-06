@@ -23,6 +23,9 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp,
                   char **save_ptr);
 
+#define DEFAULT_ARGV 2
+#define WORD_SIZE 4
+
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
    before process_execute() returns.  Returns the new process's
@@ -447,7 +450,6 @@ setup_stack (void **esp, const char *file_name, char** save_ptr)
         {
           *esp = PHYS_BASE;
           char *token;
-          int DEFAULT_ARGV = 2, WORD_SIZE = 4;
           char **argv = malloc(DEFAULT_ARGV*sizeof(char *));
           int i, argc = 0, argv_size = DEFAULT_ARGV;
 
