@@ -454,7 +454,7 @@ setup_stack (void **esp, const char *file_name, char** arg)
           char *token;
           char **argv = malloc(DEFAULT_ARGV*sizeof(char *));
           int argc = 0, argv_size = DEFAULT_ARGV;
-
+          printf("\n\nPRINTING TOKEN\n\n");
           /* Push args onto stack */
           for (token = (char *) file_name; token != NULL;
                token = strtok_r (NULL, " ", arg))
@@ -462,6 +462,10 @@ setup_stack (void **esp, const char *file_name, char** arg)
               *esp -= strlen(token) + 1;
               argv[argc] = *esp;
               argc++;
+
+              /*Printing tokens*/
+              printf("Token added: %s\n", token);
+
               /* Resize argv if arguments are more than DEFAULT_ARGV */
               if (argc >= argv_size)
                 {
@@ -476,16 +480,17 @@ setup_stack (void **esp, const char *file_name, char** arg)
           int remainder = (size_t) *esp % WORD_SIZE;
           if (remainder)
             {
-              *esp -= remainder; i
+              *esp -= remainder;
               memcpy(*esp, &argv[argc], remainder);
             }
           /* Push argv[i] for all i */
-          for (int i = argc; i >= 0; i--)
+          int i;
+          for (i = argc; i >= 0; i--)
             {
               *esp -= sizeof(char *);
               memcpy(*esp, &argv[i], sizeof(char *));
             }
-          
+
           /* Push argv. */
           token = *esp;
           *esp -= sizeof(char **);
