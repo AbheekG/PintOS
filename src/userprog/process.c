@@ -65,7 +65,7 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp, &save_ptr);
+  success = load (file_name, &if_.eip, &if_.esp, &start_ptr);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -447,7 +447,6 @@ setup_stack (void **esp, const char *file_name, char** save_ptr)
         {
           *esp = PHYS_BASE;
           char *token;
-          int DEFAULT_ARGV = 2, word_SIZE = 4;
           char **argv = malloc(DEFAULT_ARGV*sizeof(char *));
           int i, argc = 0, argv_size = DEFAULT_ARGV;
 
@@ -469,7 +468,7 @@ setup_stack (void **esp, const char *file_name, char** save_ptr)
           argv[argc] = 0;
           
           /* Align to word size (4 bytes) */
-          i = (size_t) *esp % word_SIZE;
+          i = (size_t) *esp % WORD_SIZE;
           if (i)
             {
               *esp -= i;
