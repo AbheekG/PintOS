@@ -446,7 +446,8 @@ setup_stack (void **esp, const char *file_name, char** save_ptr)
       if (success)
         {
           *esp = PHYS_BASE;
-          char *token, DEFAULT_ARGV = 2, WORD_SIZE = 4;
+          char *token;
+          int DEFAULT_ARGV = 2, WORD_SIZE = 4;
           char **argv = malloc(DEFAULT_ARGV*sizeof(char *));
           int i, argc = 0, argv_size = DEFAULT_ARGV;
 
