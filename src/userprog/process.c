@@ -497,8 +497,8 @@ setup_stack (void **esp, const char *file_name, char** save_ptr)
           *esp -= sizeof(void *);
           memcpy(*esp, &argv[argc], sizeof(void *));
           // Free argv
-          for (i = 0; i < argc; i++)
-            free(argv[i]);
+          //for (i = 0; i < argc; i++)
+            //free(argv[i]);
           free(argv);
         }
       else
