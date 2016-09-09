@@ -219,8 +219,8 @@ void test_stack (int *t)
 { 
   int i;
   char ** argv;
-  int argc = t[0];
-  argv = (char **)(t+1);
+  int argc = t[1];
+  argv = (char **)(t+3);
   printf("ARGC:%d\n", argc);
   for (i = 0; i < argc; i++)
       printf("Argv[%d] = %x pointing at %s\n", i, argv[i], argv[i]);
@@ -327,11 +327,10 @@ load (const char *file_name, void (**eip) (void), void **esp, char **arg)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp,file_name, arg)) {
-    test_stack(esp);
+  if (!setup_stack (esp,file_name, arg))
     goto done;
-  }
 
+    test_stack(*esp);
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 
@@ -469,7 +468,6 @@ setup_stack (void **esp, const char *file_name, char** arg)
           char *token;
           char **argv = malloc(DEFAULT_ARGV*sizeof(char *));
           int argc = 0, argv_size = DEFAULT_ARGV;
-          printf("\n\nPRINTING TOKEN\n\n");
           /* Push args onto stack */
           for (token = (char *) file_name; token != NULL;
                token = strtok_r (NULL, " ", arg))
@@ -477,9 +475,6 @@ setup_stack (void **esp, const char *file_name, char** arg)
               *esp -= strlen(token) + 1;
               argv[argc] = *esp;
               argc++;
-
-              /*Printing tokens*/
-              printf("Token added: %s\n", token);
 
               /* Resize argv if arguments are more than DEFAULT_ARGV */
               if (argc >= argv_size)
@@ -507,7 +502,7 @@ setup_stack (void **esp, const char *file_name, char** arg)
             }
 
           /* Push argv. */
-          token = *esp;
+	  token = *esp;
           *esp -= sizeof(char **);
           memcpy(*esp, &token, sizeof(char **));
           
