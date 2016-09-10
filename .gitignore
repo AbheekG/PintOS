@@ -1,0 +1,5 @@
+src/userprog/build/
+src/threads/build/
+*bochs*
+src/examples/
+
