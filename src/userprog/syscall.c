@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <syscall-nr.h>
 #include <inttypes.h>
 #include <list.h>
@@ -41,7 +42,7 @@ static 	void 	syscall_close (int);
 typedef int (*syscall_t) (uint32_t, uint32_t, uint32_t);
 static syscall_t syscall_function[32];
 
-static void * esp_;
+// static void * esp_;
 
 // File lock
 static struct lock fileLock;
@@ -79,7 +80,7 @@ syscall_init (void) {
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) {
+syscall_handler (struct intr_frame *f) {
 	printf ("system call!\n");
 	syscall_t func;
 	int *param = f->esp, returnValue;
@@ -95,8 +96,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 
 	func = syscall_function[*param];
 
-	esp_ = f->esp;
+	// esp_ = f->esp;
 	returnValue = func (*(param + 1), *(param + 2), *(param + 3));
+	f->eax = returnValue;
 
 	thread_exit ();
 }
@@ -215,11 +217,77 @@ syscall_filesize (int fd) {
 
 static int
 syscall_read (int fd, void *buffer, unsigned size) {
-	return 1;
+
+	int returnValue = -1;
+	struct userFile_t *userFile;
+
+	if (!validateUser (buffer) || !validateUser (buffer + size)) {
+		syscall_exit (-1);
+	} else if (fd == STDIN_FILENO){
+		unsigned i = 0;
+
+		lock_acquire (&fileLock);
+		for( ; i < size; i++){
+			((uint8_t *)buffer)[i] = input_getc();
+		}
+		lock_release (&fileLock);
+
+		returnValue = size;
+	} else if(fd == STDOUT_FILENO) {
+		// read from output error
+	} else {
+		userFile = fileFromFid (fd);
+		if (userFile == NULL) 
+			syscall_exit (-1);
+
+		lock_acquire (&fileLock);
+		returnValue = file_read (userFile->f, buffer, size);
+		lock_release (&fileLock);
+	}
+	return returnValue;
 }
+
 static int
 syscall_write (int fd, const void *buffer, unsigned size) {
-	return 1;
+	// const void *esp = (const void*)_esp;
+
+	int returnValue = -1;
+	struct userFile_t *userFile;
+
+	if (fd == STDIN_FILENO) {
+		returnValue = -1;
+	} else if (fd == STDOUT_FILENO) {
+		putbuf (buffer, size);
+		returnValue = size;
+	} else if ( !validateUser (buffer) || !validateUser (buffer + size) ) {
+		syscall_exit (-1);
+	} else {
+		userFile = fileFromFid (fd);
+		if (userFile == NULL)
+			returnValue = -1;
+		else {
+
+			size_t remaining = size;
+			void *tempBuffer = (void *)buffer;
+
+			returnValue = 0;
+			while (remaining > 0)
+			{
+				size_t offset = tempBuffer - pg_round_down (tempBuffer);
+
+				size_t writeBytes = offset + remaining > PGSIZE ? 
+				remaining - (offset + remaining - PGSIZE) : remaining;
+				
+				lock_acquire (&fileLock);
+				returnValue += file_write (userFile->f, tempBuffer, writeBytes);
+				lock_release (&fileLock);              
+
+				remaining -= writeBytes;
+				tempBuffer += writeBytes;
+			}
+		}
+	}
+	return returnValue;
 }
 
 static void
