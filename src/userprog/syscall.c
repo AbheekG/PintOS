@@ -38,8 +38,10 @@ static 	void 	syscall_seek (int, unsigned);
 static 	unsigned syscall_tell (int);
 static 	void 	syscall_close (int);
 
-typedef int (*syscall_t) (void *, void *, void *);
+typedef int (*syscall_t) (uint32_t, uint32_t, uint32_t);
 static syscall_t syscall_function[32];
+
+static void * esp_;
 
 // File lock
 static struct lock fileLock;
@@ -50,7 +52,7 @@ struct userFile_t {
 	struct file *f;
 };
 
-static bool validateUser (int);
+static bool validateUser (const int *);
 static struct userFile_t *fileFromFid (fid_t);
 static fid_t allocateFid (void);
 
@@ -91,10 +93,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	if (*param < SYS_HALT || *param > SYS_INUMBER)
 		syscall_exit (-1);
 
-	function = syscall_function[*param];
+	func = syscall_function[*param];
 
-	param_esp = f->esp;
-	ret = function (*(param + 1), *(param + 2), *(param + 3));
+	esp_ = f->esp;
+	returnValue = func (*(param + 1), *(param + 2), *(param + 3));
 
 	thread_exit ();
 }
@@ -123,7 +125,7 @@ syscall_exit (int status) {
 	while (!list_empty (&th->files) )
 	{
 		it = list_begin (&th->files);
-		sys_close ( list_entry (it, struct user_file, thread_elem)->fid );
+		syscall_close ( list_entry (it, struct userFile_t, threadElement)->fid );
 	}
 
 	th->ret_status = status;
@@ -211,8 +213,14 @@ syscall_filesize (int fd) {
 	return size;
 }
 
-// int read (int fd, void *buffer, unsigned size) ;
-// int write (int fd, const void *buffer, unsigned size) ;
+static int
+syscall_read (int fd, void *buffer, unsigned size) {
+	return 1;
+}
+static int
+syscall_write (int fd, const void *buffer, unsigned size) {
+	return 1;
+}
 
 static void
 syscall_seek (int fd, unsigned position) {
