@@ -9,6 +9,7 @@
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
 #include "threads/malloc.h"
+#include "threads/io.h"
 
 #include "devices/input.h"
 
@@ -23,19 +24,22 @@ typedef int fid_t;
 
 static void syscall_handler (struct intr_frame *);
 
-static void syscall_halt (void);
-static void syscall_exit (int);
-static pid_t syscall_exec (const char *);
-static int syscall_wait (pid_t);
-static bool syscall_create (const char *, unsigned );
-static bool syscall_remove (const char *);
-static int syscall_open (const char *);
-static int syscall_filesize (int);
-static int syscall_read (int, void *, unsigned);
-static int syscall_write (int, const void *, unsigned);
-static void syscall_seek (int, unsigned);
-static unsigned syscall_tell (int);
-static void syscall_close (int);
+static 	void 	syscall_halt (void);
+static 	void 	syscall_exit (int);
+static 	pid_t 	syscall_exec (const char *);
+static 	int 	syscall_wait (pid_t);
+static 	bool 	syscall_create (const char *, unsigned );
+static 	bool 	syscall_remove (const char *);
+static 	int 	syscall_open (const char *);
+static 	int 	syscall_filesize (int);
+static 	int 	syscall_read (int, void *, unsigned);
+static 	int 	syscall_write (int, const void *, unsigned);
+static 	void 	syscall_seek (int, unsigned);
+static 	unsigned syscall_tell (int);
+static 	void 	syscall_close (int);
+
+typedef int (*syscall_t) (void *, void *, void *);
+static syscall_t syscall_function[32];
 
 // File lock
 static struct lock fileLock;
@@ -46,20 +50,53 @@ struct userFile_t {
 	struct file *f;
 };
 
+static bool validateUser (int);
 static struct userFile_t *fileFromFid (fid_t);
 static fid_t allocateFid (void);
 
 void
-syscall_init (void) 
-{
-  intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+syscall_init (void) {
+	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+
+	lock_init (&fileLock);
+
+	syscall_function[SYS_HALT]     = (syscall_t) syscall_halt;
+	syscall_function[SYS_EXIT]     = (syscall_t) syscall_exit;
+	syscall_function[SYS_EXEC]     = (syscall_t) syscall_exec;
+	syscall_function[SYS_WAIT]     = (syscall_t) syscall_wait;
+	syscall_function[SYS_CREATE]   = (syscall_t) syscall_create;
+	syscall_function[SYS_REMOVE]   = (syscall_t) syscall_remove;
+	syscall_function[SYS_OPEN]     = (syscall_t) syscall_open;
+	syscall_function[SYS_FILESIZE] = (syscall_t) syscall_filesize;
+	syscall_function[SYS_READ]     = (syscall_t) syscall_read;
+	syscall_function[SYS_WRITE]    = (syscall_t) syscall_write;
+	syscall_function[SYS_SEEK]     = (syscall_t) syscall_seek;
+	syscall_function[SYS_TELL]     = (syscall_t) syscall_tell;
+	syscall_function[SYS_CLOSE]    = (syscall_t) syscall_close;
+
 }
 
 static void
-syscall_handler (struct intr_frame *f UNUSED) 
-{
-  printf ("system call!\n");
-  thread_exit ();
+syscall_handler (struct intr_frame *f UNUSED) {
+	printf ("system call!\n");
+	syscall_t func;
+	int *param = f->esp, returnValue;
+
+	if ( !validateUser(param) )
+		syscall_exit (-1);
+
+	if (!( validateUser (param + 1) && validateUser (param + 2) && validateUser (param + 3)))
+		syscall_exit (-1);
+
+	if (*param < SYS_HALT || *param > SYS_INUMBER)
+		syscall_exit (-1);
+
+	function = syscall_function[*param];
+
+	param_esp = f->esp;
+	ret = function (*(param + 1), *(param + 2), *(param + 3));
+
+	thread_exit ();
 }
 
 static void
@@ -75,7 +112,22 @@ syscall_halt (void) {
 
 static void
 syscall_exit (int status) {
+	struct thread *th;
+	struct list_elem *it;
 
+	th = thread_current ();
+	if (lock_held_by_current_thread (&fileLock) )
+		lock_release (&fileLock);
+
+	// Close all open files of the thread.
+	while (!list_empty (&th->files) )
+	{
+		it = list_begin (&th->files);
+		sys_close ( list_entry (it, struct user_file, thread_elem)->fid );
+	}
+
+	th->ret_status = status;
+	thread_exit ();
 }
 
 static pid_t
@@ -204,6 +256,11 @@ syscall_close (int fd) {
 	file_close (userFile->f);
 	free (userFile);
 	lock_release (&fileLock);
+}
+
+static bool
+validateUser (const int *address) {
+	return true;
 }
 
 static struct userFile_t *
