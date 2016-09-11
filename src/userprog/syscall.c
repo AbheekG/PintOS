@@ -267,24 +267,9 @@ syscall_write (int fd, const void *buffer, unsigned size) {
 			returnValue = -1;
 		else {
 
-			size_t remaining = size;
-			void *tempBuffer = (void *)buffer;
-
-			returnValue = 0;
-			while (remaining > 0)
-			{
-				size_t offset = tempBuffer - pg_round_down (tempBuffer);
-
-				size_t writeBytes = offset + remaining > PGSIZE ? 
-				remaining - (offset + remaining - PGSIZE) : remaining;
-				
-				lock_acquire (&fileLock);
-				returnValue += file_write (userFile->f, tempBuffer, writeBytes);
-				lock_release (&fileLock);              
-
-				remaining -= writeBytes;
-				tempBuffer += writeBytes;
-			}
+			lock_acquire (&fileLock);
+			returnValue = file_write (userFile->f, buffer, size);
+			lock_release (&fileLock);  
 		}
 	}
 	return returnValue;
