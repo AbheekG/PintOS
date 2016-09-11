@@ -121,12 +121,68 @@ open (const char *file) {
 	return userFile->fid;	
 }
 
-int filesize (int fd) ;
-int read (int fd, void *buffer, unsigned size) ;
-int write (int fd, const void *buffer, unsigned size) ;
-void seek (int fd, unsigned position) ;
-unsigned tell (int fd) ;
-void close (int fd) ;
+int
+filesize (int fd) {
+	struct userFile_t *userFile;
+	int size = -1;
+
+	userFile = fileFromFid (fd);
+	if (userFile == NULL)
+		return -1;
+
+	lock_acquire (&fileLock);
+	size = file_length (userFile);
+	lock_release (&fileLock);
+
+	return size;
+}
+
+// int read (int fd, void *buffer, unsigned size) ;
+// int write (int fd, const void *buffer, unsigned size) ;
+
+void
+seek (int fd, unsigned position) {
+	struct userFile_t *userFile;
+
+	userFile = fileFromFid (fd);
+	if (userFile == NULL)
+		exit (-1);
+
+	lock_acquire (&fileLock);
+	file_seek (userFile->f, position);
+	lock_release (&fileLock);
+}
+
+unsigned
+tell (int fd) {
+	struct userFile_t *userFile;
+	unsigned position;
+
+	userFile = fileFromFid (fd);
+	if (userFile == NULL)
+		exit (-1);
+
+	lock_acquire (&fileLock);
+	position = file_tell (userFile->f, position);
+	lock_release (&fileLock);
+
+	return position;
+}
+
+void
+close (int fd) {
+	struct userFile_t *userFile;
+
+	userFile = fileFromFid (fd);
+	if (userFile == NULL)
+		exit (-1);
+
+	lock_acquire (&fileLock);
+	list_remove (&userFile->threadElement);
+	file_close (userFile->f);
+	free (userFile);
+	lock_release (&fileLock);
+}
 
 // fid allocation
 static fid_t
@@ -154,7 +210,7 @@ fileFromFid (int fid)
 	for (it = list_begin (&th->files); it != list_end (&th->files);
 		it = list_next (it))
 	{
-		struct userFile_t *userFile = list_entry (it, struct userFile_t, thread_elem);
+		struct userFile_t *userFile = list_entry (it, struct userFile_t, threadElement);
 		if (userFile->fid == fid)
 			return userFile;
 	}
