@@ -85,7 +85,7 @@ syscall_handler (struct intr_frame *f) {
 	syscall_t func;
 	int *param = f->esp, returnValue;
 
-	if ( !validateUser(param) )
+	if ( !validateUser (param) )
 		syscall_exit (-1);
 
 	if (!( validateUser (param + 1) && validateUser (param + 2) && validateUser (param + 3)))
@@ -99,8 +99,6 @@ syscall_handler (struct intr_frame *f) {
 	// esp_ = f->esp;
 	returnValue = func (*(param + 1), *(param + 2), *(param + 3));
 	f->eax = returnValue;
-
-	thread_exit ();
 }
 
 static void
