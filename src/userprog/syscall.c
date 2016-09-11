@@ -1,24 +1,41 @@
-#include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <inttypes.h>
+#include <list.h>
+
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
+#include "threads/vaddr.h"
+#include "threads/palloc.h"
+#include "threads/malloc.h"
+
+#include "devices/input.h"
+
+#include "filesys/file.h"
+#include "filesys/filesys.h"
+
+#include "userprog/syscall.h"
+#include "userprog/process.h"
+
+typedef int pid_t;
+typedef int fid_t;
 
 static void syscall_handler (struct intr_frame *);
 
-void halt (void) ;
-void exit (int status) ;
-pid_t exec (const char *cmd_line) ;
-int wait (pid_t pid) ;
-bool create (const char *file, unsigned initial_size) ;
-bool remove (const char *file) ;
-int open (const char *file) ;
-int filesize (int fd) ;
-int read (int fd, void *buffer, unsigned size) ;
-int write (int fd, const void *buffer, unsigned size) ;
-void seek (int fd, unsigned position) ;
-unsigned tell (int fd) ;
-void close (int fd) ;
+static void syscall_halt (void);
+static void syscall_exit (int);
+static pid_t syscall_exec (const char *);
+static int syscall_wait (pid_t);
+static bool syscall_create (const char *, unsigned );
+static bool syscall_remove (const char *);
+static int syscall_open (const char *);
+static int syscall_filesize (int);
+static int syscall_read (int, void *, unsigned);
+static int syscall_write (int, const void *, unsigned);
+static void syscall_seek (int, unsigned);
+static unsigned syscall_tell (int);
+static void syscall_close (int);
 
 // File lock
 static struct lock fileLock;
@@ -46,33 +63,39 @@ syscall_handler (struct intr_frame *f UNUSED)
   thread_exit ();
 }
 
-void
-halt (void) {
-	shutdown_power_off ();
+static void
+syscall_halt (void) {
+	const char s[] = "Shutdown";
+	const char *p;
+
+	for (p = s; *p != '\0'; p++)
+		outb (0x8900, *p);
+
+	asm volatile ("cli; hlt" : : : "memory");
 }
 
-void
-exit (int status) {
+static void
+syscall_exit (int status) {
 
 }
 
-pid_t
-exec (const char *cmd_line) {
+static pid_t
+syscall_exec (const char *cmd_line) {
 	lock_acquire (&fileLock);
 	int returnValue = process_execute (cmd_line);
 	lock_release (&fileLock);
 	return returnValue;
 }
 
-void
-wait (pid_t pid) {
+static void
+syscall_wait (pid_t pid) {
 	process_wait (pid);
 }
 
-bool
-create (const char *file, unsigned initial_size) {
+static bool
+syscall_create (const char *file, unsigned initial_size) {
 	if (file == NULL) 
-		exit (-1);
+		syscall_exit (-1);
 	
 	lock_acquire (&fileLock);
 	int returnValue = filesys_create (file, initial_size);
@@ -80,10 +103,10 @@ create (const char *file, unsigned initial_size) {
 	return returnValue;
 }
 
-bool
-remove (const char *file, unsigned initial_size) {
+static bool
+syscall_remove (const char *file, unsigned initial_size) {
 	if (file == NULL) 
-		exit (-1);
+		syscall_exit (-1);
 	
 	lock_acquire (&fileLock);
 	int returnValue = filesys_remove (file, initial_size);
@@ -91,8 +114,8 @@ remove (const char *file, unsigned initial_size) {
 	return returnValue;
 }
 
-int
-open (const char *file) {
+static int
+syscall_open (const char *file) {
 	if (file == NULL) 
 		return -1;
 	
@@ -121,8 +144,8 @@ open (const char *file) {
 	return userFile->fid;	
 }
 
-int
-filesize (int fd) {
+static int
+syscall_filesize (int fd) {
 	struct userFile_t *userFile;
 	int size = -1;
 
@@ -140,27 +163,27 @@ filesize (int fd) {
 // int read (int fd, void *buffer, unsigned size) ;
 // int write (int fd, const void *buffer, unsigned size) ;
 
-void
-seek (int fd, unsigned position) {
+static void
+syscall_seek (int fd, unsigned position) {
 	struct userFile_t *userFile;
 
 	userFile = fileFromFid (fd);
 	if (userFile == NULL)
-		exit (-1);
+		syscall_exit (-1);
 
 	lock_acquire (&fileLock);
 	file_seek (userFile->f, position);
 	lock_release (&fileLock);
 }
 
-unsigned
-tell (int fd) {
+static unsigned
+syscall_tell (int fd) {
 	struct userFile_t *userFile;
 	unsigned position;
 
 	userFile = fileFromFid (fd);
 	if (userFile == NULL)
-		exit (-1);
+		syscall_exit (-1);
 
 	lock_acquire (&fileLock);
 	position = file_tell (userFile->f, position);
@@ -169,13 +192,13 @@ tell (int fd) {
 	return position;
 }
 
-void
-close (int fd) {
+static void
+syscall_close (int fd) {
 	struct userFile_t *userFile;
 
 	userFile = fileFromFid (fd);
 	if (userFile == NULL)
-		exit (-1);
+		syscall_exit (-1);
 
 	lock_acquire (&fileLock);
 	list_remove (&userFile->threadElement);
