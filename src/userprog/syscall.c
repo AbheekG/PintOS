@@ -81,7 +81,6 @@ syscall_init (void) {
 
 static void
 syscall_handler (struct intr_frame *f) {
-	printf ("system call!\n");
 	syscall_t func;
 	int *param = f->esp, returnValue;
 
