@@ -48,7 +48,6 @@ struct userFile_t {
 
 static struct userFile_t *fileFromFid (fid_t);
 static fid_t allocateFid (void);
-static mapid_t allocate_mapid (void);
 
 void
 syscall_init (void) 
@@ -87,9 +86,9 @@ syscall_exec (const char *cmd_line) {
 	return returnValue;
 }
 
-static void
+static int
 syscall_wait (pid_t pid) {
-	process_wait (pid);
+	return process_wait (pid);
 }
 
 static bool
@@ -104,12 +103,12 @@ syscall_create (const char *file, unsigned initial_size) {
 }
 
 static bool
-syscall_remove (const char *file, unsigned initial_size) {
+syscall_remove (const char *file) {
 	if (file == NULL) 
 		syscall_exit (-1);
 	
 	lock_acquire (&fileLock);
-	int returnValue = filesys_remove (file, initial_size);
+	bool returnValue = filesys_remove (file);
 	lock_release (&fileLock);
 	return returnValue;
 }
@@ -120,7 +119,7 @@ syscall_open (const char *file) {
 		return -1;
 	
 	struct file *openFile;
-	struce userFile_t *userFile;
+	struct userFile_t *userFile;
 
 	lock_acquire (&fileLock);
 	openFile = filesys_open (file);
@@ -137,7 +136,7 @@ syscall_open (const char *file) {
 
 	lock_acquire (&fileLock);
 	list_push_back (&thread_current ()->files, &userFile->threadElement);
-	userFile->fid = allocate_fid ();
+	userFile->fid = allocateFid ();
 	userFile->f = openFile;
 	lock_release (&fileLock);
 
@@ -154,7 +153,7 @@ syscall_filesize (int fd) {
 		return -1;
 
 	lock_acquire (&fileLock);
-	size = file_length (userFile);
+	size = file_length (userFile->f);
 	lock_release (&fileLock);
 
 	return size;
@@ -186,7 +185,7 @@ syscall_tell (int fd) {
 		syscall_exit (-1);
 
 	lock_acquire (&fileLock);
-	position = file_tell (userFile->f, position);
+	position = file_tell (userFile->f);
 	lock_release (&fileLock);
 
 	return position;
@@ -207,22 +206,6 @@ syscall_close (int fd) {
 	lock_release (&fileLock);
 }
 
-// fid allocation
-static fid_t
-allocate_fid (void)
-{
-  static fid_t nextFid = 2;
-  return nextFid++;
-}
-
-// mapid allocation
-static mapid_t
-allocate_mapid (void)
-{
-  static mapid_t nextMapid = 0;
-  return nextMapid++;
-}
-
 static struct userFile_t *
 fileFromFid (int fid)
 {
@@ -239,4 +222,10 @@ fileFromFid (int fid)
 	}
 
 	return NULL;
+}
+
+static fid_t
+allocateFid (void) {
+	static fid_t fid = 2;
+	return fid++;
 }
