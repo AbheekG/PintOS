@@ -128,6 +128,7 @@ syscall_exit (int status) {
 	}
 
 	th->ret_status = status;
+	printf ("exiting %s, status = %d", th->name, status)
 	thread_exit ();
 }
 
