@@ -120,15 +120,8 @@ syscall_exit (int status) {
 	if (lock_held_by_current_thread (&fileLock) )
 		lock_release (&fileLock);
 
-	// Close all open files of the thread.
-	while (!list_empty (&th->files) )
-	{
-		it = list_begin (&th->files);
-		syscall_close ( list_entry (it, struct userFile_t, threadElement)->fid );
-	}
-
 	th->ret_status = status;
-	printf ("exiting %s, status = %d", th->name, status)
+//	printf ("exiting %s, status = %d", th->name, status);
 	thread_exit ();
 }
 
