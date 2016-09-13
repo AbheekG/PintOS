@@ -319,7 +319,7 @@ syscall_close (int fd) {
 
 static bool
 validateUser (const int *address) {
-	return true;
+	return address < PHYS_BASE;
 }
 
 static struct userFile_t *
