@@ -122,10 +122,18 @@ syscall_halt (void) {
 static void
 syscall_exit (int status) {
 	struct thread *th;
+	struct list_elem *it;
 
 	th = thread_current ();
 	if (lock_held_by_current_thread (&fileLock) )
 		lock_release (&fileLock);
+
+	// Close all open files of the thread.
+	while (!list_empty (&th->files)) {
+		it = list_begin (&th->files);
+		syscall_close ( list_entry (it, struct userFile_t, threadElement)->fid );
+	}
+
 
 	char *token[128], *save_ptr;
 	strlcpy(token, th->name, strlen(th->name)+1);
