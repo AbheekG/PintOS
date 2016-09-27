@@ -9,6 +9,6 @@ make
 cd build
 pintos-mkdisk fs.dsk 2
 pintos -f -q
-pintos -p ../../examples/echo -a echo -- -q
-pintos run "echo 123 1 2 3 abhcsk"
-
+#pintos -p ../../examples/hello -a hello -- -q
+#pintos run "hello"
+make check

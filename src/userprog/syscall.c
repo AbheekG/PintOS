@@ -114,11 +114,15 @@ syscall_halt (void) {
 static void
 syscall_exit (int status) {
 	struct thread *th;
-	struct list_elem *it;
 
 	th = thread_current ();
 	if (lock_held_by_current_thread (&fileLock) )
 		lock_release (&fileLock);
+
+	char *token[128], *save_ptr;
+	strlcpy(token, th->name, strlen(th->name)+1);
+	strtok_r(token, " \0\n", &save_ptr);
+	printf("%s: exit(%d)\n", token, status);
 
 	th->ret_status = status;
 	thread_exit ();
