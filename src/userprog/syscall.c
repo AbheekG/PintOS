@@ -50,7 +50,7 @@ static syscall_t syscall_function[32];
 
 // File lock
 static struct lock fileLock;
-static struct list fileList;
+// static struct list fileList;
 
 struct userFile_t {
 	fid_t fid;
@@ -68,7 +68,7 @@ syscall_init (void) {
 	intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 
 	lock_init (&fileLock);
-	list_init (&fileList);
+	// list_init (&fileList);
 
 	syscall_function[SYS_HALT]     = (syscall_t) syscall_halt;
 	syscall_function[SYS_EXIT]     = (syscall_t) syscall_exit;
@@ -193,7 +193,7 @@ syscall_open (const char *file) {
 	}
 
 	lock_acquire (&fileLock);
-	list_push_back (&fileList, &userFile->threadElement);
+	list_push_back (&thread_current ()->files, &userFile->threadElement);
 	userFile->fid = allocateFid ();
 	userFile->f = openFile;
 	lock_release (&fileLock);
@@ -333,7 +333,7 @@ fileFromFid (int fid)
 	struct list_elem *it;
 
 	th = thread_current();
-	for (it = list_begin (&fileList); it != list_end (&fileList);
+	for (it = list_begin (&th->files); it != list_end (&th->files);
 		it = list_next (it))
 	{
 		struct userFile_t *userFile = list_entry (it, struct userFile_t, threadElement);
