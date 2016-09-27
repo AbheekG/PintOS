@@ -98,9 +98,24 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  while(1) {};
+  struct thread *t = NULL, *p=NULL;
+  struct list_elem *e;
+  for(e = list_begin(&all_list); e!=list_end(&all_list); e = list_next(e))
+  {
+    t = list_entry(e, struct thread, allelem);
+    if(t->tid == child_tid && t!=NULL)
+      {
+        p = t;
+        if(t->status != THREAD_DYING)
+        {
+          while(1) {};
+        }
+      }
+  }
+  if(p==NULL)
+    return -1;
   return -1;
 }
 
