@@ -102,7 +102,7 @@ process_wait (tid_t child_tid)
 {
   while(1)
   {
-    struct thread *t = get_thread_by_tid(tid);
+    struct thread *t = get_thread_by_tid(child_tid);
     if(t!=NULL)
       continue;
     else
