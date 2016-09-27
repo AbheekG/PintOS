@@ -22,7 +22,7 @@
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp,
                   char **arg);
-void test_stack (int *t);
+/* void test_stack (int *t); */
 
 #define DEFAULT_ARGV 2
 #define WORD_SIZE 4
@@ -221,7 +221,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           bool writable);
 
 /* Prints the stack pointed by t */
-void test_stack (int *t)
+/* void test_stack (int *t)
 { 
   int i;
   char ** argv;
@@ -230,7 +230,7 @@ void test_stack (int *t)
   printf("ARGC:%d\n", argc);
   for (i = 0; i < argc; i++)
       printf("Argv[%d] = %x pointing at %s\n", i, argv[i], argv[i]);
-}
+} */
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -336,7 +336,7 @@ load (const char *file_name, void (**eip) (void), void **esp, char **arg)
   if (!setup_stack (esp,file_name, arg))
     goto done;
 
-    test_stack(*esp);
+  /* test_stack(*esp); */
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 

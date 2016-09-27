@@ -121,7 +121,6 @@ syscall_exit (int status) {
 		lock_release (&fileLock);
 
 	th->ret_status = status;
-	printf ("Program ends\n");
 	thread_exit ();
 }
 
