@@ -20,6 +20,10 @@
    of thread.h for details. */
 #define THREAD_MAGIC 0xcd6abf4b
 
+/* List of all processes.  Processes are added to this list
+   when they are first scheduled and removed when they exit. */
+static struct list all_list;
+
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
 static struct list ready_list;
@@ -251,6 +255,24 @@ const char *
 thread_name (void) 
 {
   return thread_current ()->name;
+}
+
+/* Return the thread associated with the given tid.
+   Returns NULL if thread is not found. */
+struct thread *
+get_thread_by_tid(tid_t tid)
+{
+  struct list_elem *e;
+  struct thread *t;
+  for(e = list_begin(&all_list); e != list_end(&all_list); e = list_next(e))
+  {
+    t = list_entry(e, struct thread, allelem);
+    if(t->tid == tid)
+    {
+      return t;
+    }
+  }
+  return NULL;
 }
 
 /* Returns the running thread.

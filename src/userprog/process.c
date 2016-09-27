@@ -100,23 +100,14 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  struct thread *t = NULL, *p=NULL;
-  struct list_elem *e;
-  for(e = list_begin(&all_list); e!=list_end(&all_list); e = list_next(e))
+  while(1)
   {
-    t = list_entry(e, struct thread, allelem);
-    if(t->tid == child_tid && t!=NULL)
-      {
-        p = t;
-        if(t->status != THREAD_DYING)
-        {
-          while(1) {};
-        }
-      }
+    struct thread *t = get_thread_by_tid(tid);
+    if(t!=NULL)
+      continue;
+    else
+      return -1;
   }
-  if(p==NULL)
-    return -1;
-  return -1;
 }
 
 /* Free the current process's resources. */

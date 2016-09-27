@@ -24,10 +24,6 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
-/* List of all processes.  Processes are added to this list
-   when they are first scheduled and removed when they exit. */
-static struct list all_list;
-
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -128,6 +124,7 @@ void thread_unblock (struct thread *);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+struct thread *get_thread_by_tid(tid_t tid);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
