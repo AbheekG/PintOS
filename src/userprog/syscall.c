@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include <inttypes.h>
 #include <list.h>
+#include <console.h>
 
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -13,6 +14,9 @@
 #include "threads/io.h"
 
 #include "devices/input.h"
+#include "devices/timer.h"
+#include "devices/kbd.h"
+#include "devices/serial.h"
 
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -104,7 +108,8 @@ static void
 syscall_halt (void) {
 	const char s[] = "Shutdown";
 	const char *p;
-
+	print_stats();
+	printf ("Powering off...\n");
 	for (p = s; *p != '\0'; p++)
 		outb (0x8900, *p);
 
@@ -340,4 +345,16 @@ static fid_t
 allocateFid (void) {
 	static fid_t fid = 2;
 	return fid++;
+}
+
+static void
+print_stats (void)
+{
+  timer_print_stats ();
+//   thread_print_stats ();
+//   console_print_stats ();
+//   kbd_print_stats ();
+// #ifdef USERPROG
+//   exception_print_stats ();
+// #endif
 }
