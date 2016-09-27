@@ -3,7 +3,7 @@
 #include <syscall-nr.h>
 #include <inttypes.h>
 #include <list.h>
-#include <console.h>
+// #include <console.h>
 
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -13,10 +13,10 @@
 #include "threads/malloc.h"
 #include "threads/io.h"
 
-#include "devices/input.h"
+// #include "devices/input.h"
 #include "devices/timer.h"
-#include "devices/kbd.h"
-#include "devices/serial.h"
+// #include "devices/kbd.h"
+// #include "devices/serial.h"
 
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -60,6 +60,7 @@ struct userFile_t {
 static bool validateUser (const int *);
 static struct userFile_t *fileFromFid (fid_t);
 static fid_t allocateFid (void);
+static void print_stats (void);
 
 void
 syscall_init (void) {
