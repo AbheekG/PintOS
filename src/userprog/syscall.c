@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include <inttypes.h>
 #include <list.h>
