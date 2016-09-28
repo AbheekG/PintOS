@@ -136,8 +136,8 @@ syscall_exit (int status) {
 	}
 
 
-	char *token[128], *save_ptr;
-	strlcpy(token, th->name, strlen(th->name)+1);
+	char token[128], *save_ptr;
+	strlcpy(token, th->name, sizeof th->name);
 	strtok_r(token, " \0\n", &save_ptr);
 	printf("%s: exit(%d)\n", token, status);
 
