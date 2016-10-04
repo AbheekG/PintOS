@@ -129,6 +129,7 @@ struct thread *get_thread_by_tid(tid_t tid);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+bool cmp_ticks (const struct list_elem *, const struct list_elem *, void *aux UNUSED);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
