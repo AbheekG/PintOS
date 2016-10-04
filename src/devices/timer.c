@@ -17,6 +17,8 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+static struct list sleep_list;
+
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -43,7 +45,7 @@ timer_init (void)
   outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
   outb (0x40, count & 0xff);
   outb (0x40, count >> 8);
-
+  list_init(&sleep_list);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
 
@@ -98,11 +100,17 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  if (ticks <= 0)
+    {
+      return;
+    }
+  enum intr_level old_level = intr_disable ();
+  thread_current()->ticks = timer_ticks() + ticks;
+  list_insert_ordered(&sleep_list, &thread_current()->elem,
+          (list_less_func *) &cmp_ticks, NULL);
+  thread_block();
+  intr_set_level(old_level);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -181,6 +189,18 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  struct list_elem *e = list_begin(&sleep_list);
+  while (e != list_end(&sleep_list))
+  {
+    struct thread *t = list_entry(e, struct thread, elem);      
+    if (ticks < t->ticks)
+    {
+      break;
+    }
+    list_remove(e); // remove from sleep list
+    thread_unblock(t); // Unblock and add to ready list
+    e = list_begin(&sleep_list);
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
