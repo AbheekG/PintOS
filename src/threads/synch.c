@@ -69,7 +69,8 @@ sema_down (struct semaphore *sema)
   while (sema->value == 0) 
     {
       donate_priority();
-      list_push_back (&sema->waiters, &thread_current ()->elem);
+      list_insert_ordered (&sema->waiters, &thread_current ()->elem,
+           (list_less_func *) &priority_comp, NULL);
       thread_block ();
     }
   sema->value--;
@@ -120,9 +121,9 @@ sema_up (struct semaphore *sema)
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
                                 struct thread, elem));
   }
+  sema->value++;
   if(!intr_context())
     is_max_priority();
-  sema->value++;
   intr_set_level (old_level);
 }
 
@@ -228,8 +229,8 @@ lock_try_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!lock_held_by_current_thread (lock));
 
-  success = sema_try_down (&lock->semaphore);
   enum intr_level old_level = intr_disable();
+  success = sema_try_down (&lock->semaphore);
   if (success)
   {
     thread_current()->lock_required= NULL;
@@ -250,14 +251,14 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
   /* Conditional for next project. */
-  
+  enum intr_level old_level = intr_disable();
+  lock->holder = NULL;
   /* Delete relying list. */
   delete_lock_waitlist(lock);
   /* Priority update. */
   renew_priority();
-
-  lock->holder = NULL;
   sema_up (&lock->semaphore);
+  intr_set_level (old_level);
 }
 
 /* Returns true if the current thread holds LOCK, false

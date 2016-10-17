@@ -343,9 +343,11 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered(&ready_list, &cur->elem,
+    {
+      list_insert_ordered(&ready_list, &cur->elem,
         (list_less_func *) &priority_comp,
         NULL);
+    }
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -683,16 +685,17 @@ void donate_priority (void)
 
 void delete_lock_waitlist(struct lock *lock)
 {
-  struct list_elem *e, *temp;
-  for(e = list_begin(&thread_current()->relying); e != list_end(&thread_current()->relying);
-    e = list_next(temp))
+  struct list_elem *e = list_begin(&thread_current()->donations);
+  struct list_elem *next;
+  while (e != list_end(&thread_current()->donations))
     {
-      struct thread *t = list_entry(e, struct thread, relying_elem);
-      temp = e;
-      if (t->lock_required == lock)
-      {
-        list_remove(e);
-      }
+      struct thread *t = list_entry(e, struct thread, donation_elem);
+      next = list_next(e);
+      if (t->wait_on_lock == lock)
+  {
+    list_remove(e);
+  }
+      e = next;
     }
 }
 
