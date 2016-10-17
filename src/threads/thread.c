@@ -209,6 +209,10 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  old_level = intr_disable();
+  is_max_priority();
+  intr_set_level (old_level);
+
   #ifdef USERPROG
     list_init (&t->files);
   #endif
@@ -365,14 +369,27 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  enum intr_level old_level = intr_disable ();
+  int original_priority = thread_current()->priority;
+  thread_current ()->initial_priority = new_priority;
+  renew_priority();
+  // Need to donate?
+  if (original_priority < thread_current()->priority)
+      donate_priority();
+  // Test if the processor should be yielded
+  if (original_priority > thread_current()->priority)
+      is_max_priority();
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  enum intr_level old_level = intr_disable ();
+  int priority = thread_current()->priority;
+  intr_set_level (old_level);
+  return priority;
 }
 
 /* Sets the current thread's nice value to NICE. */

@@ -201,6 +201,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     thread_unblock(t); // Unblock and add to ready list
     e = list_begin(&sleep_list);
   }
+  is_max_priority();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
