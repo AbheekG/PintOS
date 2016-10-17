@@ -651,10 +651,10 @@ void donate_priority (void)
     depth++;
       // If lock is not being held, return
     if (!lock->holder)
-      return 1;
+      return;
     
     else if (lock->holder->priority >= t->priority)
-     return 1;
+     return;
     
     else
       {
@@ -667,7 +667,7 @@ void donate_priority (void)
 
 void delete_lock_waitlist(struct lock *lock)
 {
-  struct list_elem *e, *next;
+  struct list_elem *e, *temp;
   for(e = list_begin(&thread_current()->relying); e != list_end(&thread_current()->relying);
     e = list_next(temp))
     {
@@ -694,4 +694,25 @@ void renew_priority (void)
     {
       t->priority = s->priority;
     }
+}
+
+void is_max_priority (void)
+{
+  if ( list_empty(&ready_list) )
+      return;
+  struct thread *t = list_entry(list_front(&ready_list), struct thread, elem);
+  if (intr_context())
+    {
+      thread_ticks++;
+      if ( thread_current()->priority < t->priority || (thread_ticks >= TIME_SLICE &&
+      thread_current()->priority == t->priority) )
+      {
+        intr_yield_on_return();
+      }
+      return;
+    }
+  if (thread_current()->priority < t->priority)
+  {
+    thread_yield();
+  }
 }

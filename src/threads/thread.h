@@ -97,7 +97,7 @@ struct thread
     int initial_priority;
     struct lock* lock_required;
     struct list relying;
-    struct list_elem relying_elem
+    struct list_elem relying_elem;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -155,5 +155,6 @@ int thread_get_load_avg (void);
 void donate_priority (void);
 void delete_lock_waitlist(struct lock *lock);
 void renew_priority (void);
+void test_max_priority (void);
 
 #endif /* threads/thread.h */
