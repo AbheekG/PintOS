@@ -492,6 +492,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
+  t->initial_priority = priority;
+  t->lock_required = NULL;
+  list_init(&t->relying);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -608,7 +611,7 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-bool cmp_ticks (const struct list_elem *a,
+bool ticks_comp (const struct list_elem *a,
     const struct list_elem *b,
     void *aux UNUSED)
 {
@@ -619,4 +622,59 @@ bool cmp_ticks (const struct list_elem *a,
       return true;
     }
   return false;
+}
+
+void donate_priority (void)
+{
+  int depth = 0;
+  struct thread *t = thread_current();
+  struct lock *lock = t->lock_required;
+  while (lock && depth < 8)
+  {
+    depth++;
+      // If lock is not being held, return
+    if (!lock->holder)
+      return 1;
+    
+    else if (lock->holder->priority >= t->priority)
+     return 1;
+    
+    else
+      {
+        lock->holder->priority = t->priority;
+        t = lock->holder;
+        lock = t->lock_required;
+      }
+ }
+}
+
+void delete_lock_waitlist(struct lock *lock)
+{
+  struct list_elem *e, *next;
+  for(e = list_begin(&thread_current()->relying); e != list_end(&thread_current()->relying);
+    e = list_next(temp))
+    {
+      struct thread *t = list_entry(e, struct thread, relying_elem);
+      temp = e;
+      if (t->lock_required == lock)
+      {
+        list_remove(e);
+      }
+    }
+}
+
+void renew_priority (void)
+{
+  struct thread *t = thread_current();
+  t->priority = t->initial_priority;
+  if (list_empty(&t->relying))
+    {
+      return;
+    }
+  struct thread *s = list_entry(list_front(&t->relying),
+        struct thread, relying_elem);
+  if (s->priority > t->priority)
+    {
+      t->priority = s->priority;
+    }
 }

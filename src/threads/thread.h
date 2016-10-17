@@ -89,7 +89,15 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
+    
+    /* For timer sleep. */
     int64_t ticks;
+
+    /* For priority scheduling. */
+    int initial_priority;
+    struct lock* lock_required;
+    struct list relying;
+    struct list_elem relying_elem
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -129,7 +137,8 @@ struct thread *get_thread_by_tid(tid_t tid);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
-bool cmp_ticks (const struct list_elem *, const struct list_elem *, void *aux UNUSED);
+bool ticks_comp (const struct list_elem *, const struct list_elem *, void *aux UNUSED);
+bool priority_comp (const struct list_elem *, const struct list_elem *, void *aux UNUSED);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
@@ -142,5 +151,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+void donate_priority (void);
+void delete_lock_waitlist(struct lock *lock);
+void renew_priority (void);
 
 #endif /* threads/thread.h */
