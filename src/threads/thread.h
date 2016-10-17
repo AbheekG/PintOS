@@ -155,6 +155,6 @@ int thread_get_load_avg (void);
 void donate_priority (void);
 void delete_lock_waitlist(struct lock *lock);
 void renew_priority (void);
-void test_max_priority (void);
+void is_max_priority (void);
 
 #endif /* threads/thread.h */
